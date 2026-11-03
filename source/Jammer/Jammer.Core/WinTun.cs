@@ -314,7 +314,7 @@ public class WinTun : ITun
             }
             if (!string.IsNullOrEmpty(output))
             {
-                _tunLogger.Error("[netsh stdOut] {Output}", output);
+                _tunLogger.Information("[netsh stdOut] {Output}", output);
             }
 
             if (process.ExitCode!=0)

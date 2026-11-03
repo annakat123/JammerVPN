@@ -73,10 +73,6 @@ public sealed class VpnConnection
             route.Route(address, tunnelIp, null, null);
             route.DNS();
             if (OperatingSystem.IsWindows() && tun is WinTun) proxy = new WindowsProxyScope();
-            IsConnected = true;
-            IsConnecting = false;
-            Changed?.Invoke();
-            Log.Information("VPN connected; tunnel address {TunnelIp}", tunnelIp);
             var diagnostics = new TunnelDiagnostics(tunnelIp);
 
             async Task Report()
@@ -111,7 +107,21 @@ public sealed class VpnConnection
             var report = Report();
             var receive = Receive();
             var send = Send();
-            try { await await Task.WhenAny(receive, send); }
+            try
+            {
+                if (tun is WinTun)
+                {
+                    Log.Information("Checking DNS through JammerTun before marking VPN connected");
+                    var ready = TunnelReadiness.CheckAsync(tunnelIp, stop.Token);
+                    await await Task.WhenAny(ready, receive, send);
+                    await ready;
+                }
+                IsConnected = true;
+                IsConnecting = false;
+                Changed?.Invoke();
+                Log.Information("VPN connected; tunnel address {TunnelIp}", tunnelIp);
+                await await Task.WhenAny(receive, send);
+            }
             finally
             {
                 stop.Cancel();

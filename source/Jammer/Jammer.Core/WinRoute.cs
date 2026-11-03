@@ -9,6 +9,20 @@ namespace Jammer.Core;
 public class WinRoute : IRoute
 {
     private string? _serverInterface;
+    private bool _serverRouteAdded;
+
+    private static bool HasServerRoute(string serverIp, string name, string gateway)
+    {
+        static string Quote(string value) => "'" + value.Replace("'", "''") + "'";
+        var start = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true };
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-NonInteractive");
+        start.ArgumentList.Add("-Command");
+        start.ArgumentList.Add($"$r = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix {Quote(serverIp + "/32")} -InterfaceAlias {Quote(name)} -ErrorAction SilentlyContinue | Where-Object NextHop -eq {Quote(gateway)}; if ($r) {{ exit 0 }} else {{ exit 1 }}");
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot inspect server route");
+        if (!process.WaitForExit(10000)) { process.Kill(); throw new TimeoutException("Server route query timed out"); }
+        return process.ExitCode == 0;
+    }
     private static ILogger _winRouteLogger = Log.ForContext("SourceContext", "WinRoute");
 
     /// <summary>
@@ -98,8 +112,12 @@ public class WinRoute : IRoute
         RunNetsh(
             $"""interface ipv4 set address name="JammerTun" static {clientIp} 255.255.255.0 172.16.0.1""");
         
-        RunNetsh(
-            $"""interface ipv4 add route prefix={serverIp}/32 interface="{localInterface}" nexthop={localGatewayIp} store=active""");
+        _serverRouteAdded = false;
+        if (!HasServerRoute(serverIp, localInterface, localGatewayIp))
+        {
+            RunNetsh($"""interface ipv4 add route prefix={serverIp}/32 interface="{localInterface}" nexthop={localGatewayIp} store=active""");
+            _serverRouteAdded = true;
+        }
         
         RunNetsh(
             """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
@@ -117,8 +135,9 @@ public class WinRoute : IRoute
     /// <param name="localInterface"></param>
     public void Clean(string serverIp, string localInterface)
     {
-        RunNetsh(
-            $"""interface ipv4 delete route prefix={serverIp}/32 interface="{_serverInterface ?? localInterface}" """, required: false);
+        if (_serverRouteAdded)
+            RunNetsh($"""interface ipv4 delete route prefix={serverIp}/32 interface="{_serverInterface ?? localInterface}" """, required: false);
+        _serverRouteAdded = false;
 
         RunNetsh(
             $"""interface ipv4 delete route prefix=0.0.0.0/1 interface="{localInterface}" """, required: false);

@@ -47,6 +47,7 @@ public sealed class VpnConnection
         Changed?.Invoke();
         ITun? tun = null;
         IRoute? route = null;
+        WindowsProxyScope? proxy = null;
         bool adapterCreated = false, routesStarted = false;
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         _socket = socket;
@@ -71,15 +72,30 @@ public sealed class VpnConnection
             routesStarted = true;
             route.Route(address, tunnelIp, null, null);
             route.DNS();
+            if (OperatingSystem.IsWindows() && tun is WinTun) proxy = new WindowsProxyScope();
             IsConnected = true;
             IsConnecting = false;
             Changed?.Invoke();
             Log.Information("VPN connected; tunnel address {TunnelIp}", tunnelIp);
+            var diagnostics = new TunnelDiagnostics(tunnelIp);
+
+            async Task Report()
+            {
+                using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+                try { while (await timer.WaitForNextTickAsync(stop.Token)) diagnostics.Report("10s"); }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+            }
 
             async Task Receive()
             {
                 while (!stop.IsCancellationRequested)
-                    tun.SendPacket(Crypto.AES.Decrypt(await Frame.ReadFrameAsync(socket), key));
+                {
+                    var frame = await Frame.ReadFrameAsync(socket);
+                    diagnostics.FrameReceived();
+                    var packet = Crypto.AES.Decrypt(frame, key);
+                    tun.SendPacket(packet);
+                    diagnostics.ToTun(packet);
+                }
             }
             async Task Send()
             {
@@ -87,9 +103,12 @@ public sealed class VpnConnection
                 {
                     var packet = tun.ReceivePacket();
                     if (packet is null) { await Task.Delay(1, stop.Token); continue; }
+                    diagnostics.FromTun(packet);
                     await Frame.WriteFrameAsync(socket, Crypto.AES.Encrypt(packet, key));
+                    diagnostics.FrameSent();
                 }
             }
+            var report = Report();
             var receive = Receive();
             var send = Send();
             try { await await Task.WhenAny(receive, send); }
@@ -98,6 +117,8 @@ public sealed class VpnConnection
                 stop.Cancel();
                 socket.Dispose();
                 try { await Task.WhenAll(receive, send); } catch { /* First failure is propagated above. */ }
+                await report;
+                diagnostics.Report("session end");
             }
         }
         catch (Exception) when (_disconnectRequested) { }
@@ -109,6 +130,7 @@ public sealed class VpnConnection
                 catch (Exception ex) { Log.Error(ex, "Could not remove VPN routes"); }
             if (adapterCreated && tun is WinTun)
                 try { WinTun.Close(); } catch (Exception ex) { Log.Error(ex, "Could not close TUN adapter"); }
+            try { proxy?.Dispose(); } catch (Exception ex) { Log.Error(ex, "Could not restore Windows proxy settings"); }
             _socket = null;
             _stop = null;
             IsConnected = IsConnecting = false;

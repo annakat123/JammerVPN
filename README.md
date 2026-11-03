@@ -13,7 +13,7 @@ dotnet build Jammer.Dev.sln -c Release
 dotnet publish source/Jammer-desktop/Jammer-desktop/Jammer-desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o build/JammerVPN
 ```
 
-Запуск: `build/JammerVPN/Jammer-desktop.exe` от имени администратора. `wintun.dll` должна находиться рядом с exe и копируется при публикации.
+Запуск: двойным кликом `build/JammerVPN/Jammer-desktop.exe`. Программа сама запрашивает права администратора через стандартное подтверждение Windows. `wintun.dll` должна находиться рядом с exe и копируется при публикации.
 Ввести IPv4 своего сервера. Сервер должен поддерживать исходный протокол Jammer TCP/7777.
 
 ## Что изменено

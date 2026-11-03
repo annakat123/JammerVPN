@@ -7,6 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="../Jammer.Core/Jammer.Core.csproj" />
+      <EmbeddedResource Include="setup-firewall.py" LogicalName="Jammer.Deploy.setup-firewall.py" />
+      <EmbeddedResource Include="install-server.sh" LogicalName="Jammer.Deploy.install-server.sh" />
       <PackageReference Include="Serilog" Version="4.4.0" />
       <PackageReference Include="SSH.NET" Version="2026.0.0" />
     </ItemGroup>

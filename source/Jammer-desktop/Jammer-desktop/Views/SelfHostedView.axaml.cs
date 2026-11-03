@@ -17,6 +17,16 @@ public partial class SelfHostedView : UserControl
     public SelfHostedView()
     {
         InitializeComponent();
+        AttachedToVisualTree += (_, _) => { GuiLogSink.InstallUpdated += UpdateLog; UpdateLog(); };
+        DetachedFromVisualTree += (_, _) => GuiLogSink.InstallUpdated -= UpdateLog;
+    }
+
+    private void UpdateLog()
+    {
+        if (GuiLogSink.InstallText.Length == 0) return;
+        bool follow = InstallScroll.Extent.Height - InstallScroll.Viewport.Height - InstallScroll.Offset.Y < 24;
+        InstallStatus.Text = GuiLogSink.InstallText;
+        if (follow) Avalonia.Threading.Dispatcher.UIThread.Post(() => InstallScroll.ScrollToEnd(), Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
     private void BackButton_OnClick(object? sender, RoutedEventArgs e)
@@ -30,7 +40,10 @@ public partial class SelfHostedView : UserControl
     private async void Button_OnClick(object? sender, RoutedEventArgs e)
     {
         int.TryParse(SshPortTextBox.Text, out var port);
-        try { await SshService.DeploySelfHosted(IpTextBox.Text, port, LoginTextBox.Text, PasswordTextBox.Text); }
-        catch (Exception ex) { Log.Error(ex, "Self-hosted installation failed"); }
+        var button = (Button)sender!;
+        button.IsEnabled = false;
+        try { await SshService.DeploySelfHosted(IpTextBox.Text ?? "", port, LoginTextBox.Text ?? "", PasswordTextBox.Text ?? ""); }
+        catch (Exception ex) { Log.ForContext("SourceContext", "SshService").Error(ex, "Self-hosted installation failed"); }
+        finally { button.IsEnabled = true; }
     }
 }

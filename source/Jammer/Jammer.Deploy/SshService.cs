@@ -1,185 +1,70 @@
-﻿using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Net.Sockets;
+using System.Reflection;
 using Renci.SshNet;
 using Serilog;
-using Serilog.Core;
-using ILogger = Serilog.ILogger;
 
 namespace Jammer.Deploy;
 
 public class SshService
 {
-    private static ILogger _sshServiceLogger = Log.ForContext("SourceContext", "SshService");
-    
+    private const string ReleaseUrl = "https://github.com/Vimer5410/Jammer/releases/download/v0.1.0/jammer-linux-server-x64";
+    private const string ReleaseHash = "81c5c33dd8ac6a9962affdd7547016cc19af3bb33b37c1fc744ad2b3a6a17f68";
+    private static readonly ILogger Logger = Log.ForContext("SourceContext", "SshService");
+
     public static async Task DeploySelfHosted(string ip, int port, string name, string password)
     {
-        if (IsValidIpAddress(ip) && IsValidPort(port))
+        if (!IPAddress.TryParse(ip, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
+            throw new ArgumentException("Укажите корректный IPv4-адрес сервера.");
+        if (port is < 1 or > 65535 || string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(password))
+            throw new ArgumentException("Проверьте SSH-порт, логин и пароль.");
+
+        await Task.Run(async () =>
         {
-            await DeployFromGithubAsync(ip, port, name, password);
-        }
-    }
-
-    private static void UpJammerService(SshClient sshClient)
-    {
-        _sshServiceLogger.Information("попытка поднятия служб Jammer Service....");
-
-        using var systemdCmd = sshClient.RunCommand("systemctl stop jammer; " +
-                                             """
-                                             cat > /etc/systemd/system/jammer.service <<'EOF'
-                                             [Unit]
-                                             Description=Jammer VPN server
-                                             After=network.target
-                                             
-                                             [Service]
-                                             ExecStart=/opt/jammer/jammer
-                                             Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR=/opt/jammer/.net
-                                             Restart=on-failure
-                                             RestartSec=3
-                                             
-                                             [Install]
-                                             WantedBy=multi-user.target
-                                             EOF
-                                             """.ReplaceLineEndings("\n"));
-
-        using var upCmd = sshClient.RunCommand("systemctl daemon-reload &&" +
-                                               "systemctl enable --now jammer &&" +
-                                               "sysctl -w net.ipv4.ip_forward=1 &&" +
-                                               "(iptables -t nat -C POSTROUTING -s 172.16.0.0/24 -o eth0 -j MASQUERADE || iptables -t nat -A POSTROUTING -s 172.16.0.0/24 -o eth0 -j MASQUERADE) &&" +
-                                               "echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-jammer.conf");
-
-        using var isServerUpCmd = sshClient.RunCommand("systemctl is-active jammer");
-        
-        if (systemdCmd.ExitStatus==0 && upCmd.ExitStatus==0 && isServerUpCmd.ExitStatus==0)
-        {
-            _sshServiceLogger.Information("сервер успешно поднят и работает");
-        }
-        else
-        {
-            _sshServiceLogger.Error("ошибка поднятия служб сервера {status}: {error} {active}", 
-                upCmd.ExitStatus, upCmd.Error, isServerUpCmd.Result);
-        }
-    }
-
-
-    private static async Task DeploySftpAsync(string ip, int port, string name, string password)
-    {
-        _sshServiceLogger.Information("попытка установить сервер через sftp...");
-        
-        string url = "https://github.com/Vimer5410/Jammer/releases/download/v0.1.0/jammer-linux-server-x64";
-        string localPath = Path.Combine(Path.GetTempPath(), "jammer-linux-server-x64");
-        
-        using var sftp = new SftpClient(ip, port, name, password);
-        using var ssh = new SshClient(ip, port, name, password);
-        sftp.Connect();
-        ssh.Connect();
-
-        using var createDirCmd = ssh.RunCommand("mkdir -p /opt/jammer");
-        
-        using var http = new HttpClient();
-        
-        await using var source = await http.GetStreamAsync(url);
-        await using var file = File.Create(localPath);
-        
-        await source.CopyToAsync(file);
-        file.Close();
-        await using var fs = File.OpenRead(localPath);
-
-        await sftp.UploadFileAsync(fs, "/opt/jammer/jammer.new");
-        sftp.ChangePermissions("/opt/jammer/jammer.new", 755);
-
-        using var mvCmd = ssh.RunCommand("mv /opt/jammer/jammer.new /opt/jammer/jammer");
-
-        if (mvCmd.ExitStatus==0)
-        {
-            _sshServiceLogger.Information("сервер успешно установлен через sftp");
-            UpJammerService(ssh);
-        }
-        else
-        {
-            _sshServiceLogger.Error("ошибка установки через sftp");
-        }
-
-    }
-
-    private static async Task DeployFromGithubAsync(string ip, int port, string name, string password)
-    {
-        _sshServiceLogger.Information("попытка установить сервер напрямую с github...");
-        
-        using var ssh = new SshClient(ip, port, name, password);
-        ssh.Connect();
-
-        using var cmd = ssh.RunCommand("mkdir -p /opt/jammer &&"+
-                                       "curl -fsSL -o /opt/jammer/jammer.new https://github.com/Vimer5410/Jammer/releases/download/v0.1.0/jammer-linux-server-x64 &&" +
-                                       "chmod +x /opt/jammer/jammer.new &&" +
-                                       "mv /opt/jammer/jammer.new /opt/jammer/jammer");
-        
-
-        switch (cmd.ExitStatus)
-        {
-            case 0:
-                _sshServiceLogger.Information("сервер успешно установлен через ssh");
-                UpJammerService(ssh);
-                break;
-            
-            case 6:
-                _sshServiceLogger.Error("ошибка DNS адресации");
-                await DeploySftpAsync(ip, port, name, password);
-                break;
-            
-            case 7:
-                _sshServiceLogger.Error("не удалось подключиться");
-                await DeploySftpAsync(ip, port, name, password);
-                break;
-            
-            case 28:
-                _sshServiceLogger.Error("истекло время ожидания");
-                await DeploySftpAsync(ip, port, name, password);
-                break;
-            
-            case 35:
-                _sshServiceLogger.Error("ошибка TLS соединения");
-                await DeploySftpAsync(ip, port, name, password);
-                break;
-            
-            case 56:
+            using var ssh = new SshClient(ip, port, name, password);
+            ssh.ConnectionInfo.Timeout = TimeSpan.FromSeconds(20);
+            ssh.Connect();
+            Run(ssh, "test \"$(id -u)\" = 0 && test \"$(uname -m)\" = x86_64 && test -c /dev/net/tun && command -v systemctl >/dev/null",
+                "Нужны root, Linux x86_64, systemd и /dev/net/tun");
+            Run(ssh, "mkdir -p /opt/jammer", "Создание каталога");
+            Logger.Information("Загрузка серверного релиза Jammer…");
+            using var download = ssh.CreateCommand($"curl -fSL --connect-timeout 15 --max-time 120 -o /opt/jammer/jammer.new {ReleaseUrl}");
+            download.CommandTimeout = TimeSpan.FromSeconds(140);
+            download.Execute();
+            using var sftp = new SftpClient(ip, port, name, password);
+            sftp.ConnectionInfo.Timeout = TimeSpan.FromSeconds(20);
+            sftp.Connect();
+            if (download.ExitStatus != 0)
             {
-                _sshServiceLogger.Error("соединение оборвалось при получении данных");
-                using var newCmd = ssh.RunCommand("mkdir -p /opt/jammer &&"+
-                                                  "curl -fL -o /opt/jammer/jammer https://github.com/Vimer5410/Jammer/releases/download/v0.1.0/jammer-linux-server-x64 &&"+
-                                                  "chmod +x /opt/jammer/jammer");
-
-                if (newCmd.ExitStatus == 0)
-                {
-                    _sshServiceLogger.Information("сервер успешно установлен через ssh");
-                    UpJammerService(ssh);
-                }
-                else
-                {
-                    await DeploySftpAsync(ip, port, name, password);
-                }
-                
+                Logger.Warning("Сервер не скачал релиз; загружаем через SFTP");
+                using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+                using var source = await http.GetStreamAsync(ReleaseUrl);
+                await sftp.UploadFileAsync(source, "/opt/jammer/jammer.new");
             }
-                break;
-            
-            case 127:
-                _sshServiceLogger.Error("команда не найдена");
-                await DeploySftpAsync(ip, port, name, password);
-                break;
-
-            default:
-                _sshServiceLogger.Error("ошибка установки через ssh {status}: {error}", cmd.ExitStatus, cmd.Error);
-                break;
-        }
-
+            Run(ssh, $"echo '{ReleaseHash}  /opt/jammer/jammer.new' | sha256sum -c -", "Проверка SHA-256 релиза");
+            foreach (string file in new[] { "setup-firewall.py", "install-server.sh" })
+            {
+                using var source = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Jammer.Deploy.{file}")
+                    ?? throw new InvalidOperationException($"Нет ресурса {file}");
+                using var reader = new StreamReader(source);
+                using var normalized = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(reader.ReadToEnd().ReplaceLineEndings("\n")));
+                sftp.UploadFile(normalized, $"/opt/jammer/{file}.new");
+            }
+            Logger.Information("Настройка firewall, NAT и службы Jammer…");
+            Run(ssh, "bash /opt/jammer/install-server.sh.new", "Установка сервера");
+            Logger.Information("Проверка TCP/7777 и DNS-запроса через туннель…");
+            await ServerProbe.CheckAsync(address);
+            Logger.Information("Установка завершена: TCP/7777 доступен, запрос и ответ DNS прошли через VPN, forwarding и NAT.");
+        });
     }
 
-    private static bool IsValidIpAddress(string ip)
+    private static void Run(SshClient ssh, string command, string stage)
     {
-        var iptype=Uri.CheckHostName(ip);
-        return (iptype == UriHostNameType.IPv4);
-    }
-
-    private static bool IsValidPort(int port)
-    {
-        return (port > 0 && port < 65536);
+        using var cmd = ssh.CreateCommand(command);
+        cmd.CommandTimeout = TimeSpan.FromMinutes(3);
+        var output = cmd.Execute().Trim();
+        if (cmd.ExitStatus != 0)
+            throw new InvalidOperationException($"{stage}: код {cmd.ExitStatus}. {cmd.Error.Trim()} {output}");
+        if (output.Length > 0) Logger.Information("{Output}", output);
     }
 }

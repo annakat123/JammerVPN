@@ -32,7 +32,7 @@ internal static class ProxyDiagnostics
                 Log.Information("Local proxy listener {Host}:{Port} is reachable", uri.Host, uri.Port);
             }
             catch (Exception ex) when (ex is SocketException or TimeoutException)
-            { Log.Warning("Local proxy {Host}:{Port} is unavailable. Apps using it need the proxy process running; TUN cannot replace it", uri.Host, uri.Port); }
+            { Log.Warning("Local proxy {Host}:{Port} is unavailable; check the Jammer local proxy listener log", uri.Host, uri.Port); }
         }
     }
 }

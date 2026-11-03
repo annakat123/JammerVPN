@@ -47,6 +47,7 @@ public sealed class VpnConnection
         Changed?.Invoke();
         ITun? tun = null;
         IRoute? route = null;
+        LocalProxy? proxy = null;
         bool adapterCreated = false, routesStarted = false;
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         _socket = socket;
@@ -113,6 +114,7 @@ public sealed class VpnConnection
                     var ready = TunnelReadiness.CheckAsync(tunnelIp, stop.Token);
                     await await Task.WhenAny(ready, receive, send);
                     await ready;
+                    proxy = LocalProxy.FromSettings(tunnelIp, stop.Token);
                     try { await ProxyDiagnostics.ReportAsync(stop.Token); }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     { Log.Warning(ex, "Could not inspect system proxy; settings were left unchanged"); }
@@ -126,6 +128,9 @@ public sealed class VpnConnection
             finally
             {
                 stop.Cancel();
+                if (proxy is not null)
+                    try { await proxy.DisposeAsync(); }
+                    catch (Exception ex) { Log.Error(ex, "Could not stop local proxy"); }
                 socket.Dispose();
                 try { await Task.WhenAll(receive, send); } catch { /* First failure is propagated above. */ }
                 await report;

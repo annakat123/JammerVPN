@@ -42,8 +42,8 @@ public class WinTun : ITun
     
     public static void Close()
     {
-        WintunEndSession(_session);
-        WintunCloseAdapter(_tunAdapter);
+        if (_session != IntPtr.Zero) WintunEndSession(_session);
+        if (_tunAdapter != IntPtr.Zero) WintunCloseAdapter(_tunAdapter);
         _tunAdapter = IntPtr.Zero;
         _session = IntPtr.Zero;
     }
@@ -241,7 +241,8 @@ public class WinTun : ITun
 
         if (buffer == IntPtr.Zero)
         {
-            throw new OutOfMemoryException("[WinTun] не удалось выделить память под пакет");
+            int error = Marshal.GetLastWin32Error();
+            throw new System.ComponentModel.Win32Exception(error, $"[WinTun] ошибка записи пакета, код {error}");
         }
         
         Marshal.Copy(packet, 0, buffer, packetLength);
@@ -265,6 +266,8 @@ public class WinTun : ITun
         if (_receivedPackets == IntPtr.Zero)
         {
             int error = Marshal.GetLastWin32Error();
+            if (error != 259) // ERROR_NO_MORE_ITEMS: packets are not available yet.
+                throw new System.ComponentModel.Win32Exception(error, $"[WinTun] ошибка чтения пакета, код {error}");
             return null;
         }
     

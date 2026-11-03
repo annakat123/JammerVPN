@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -67,7 +67,7 @@
         
         <!-- Контейнер с двумя полями ввода(ip адрес и ssh порт) -->
         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="20,0,20,0" ColumnSpacing="20">
-            <TextBlock Grid.Column="0" FontFamily="Cascadia Mono, Consolas, monospace" Text="Ip-адрес сервера"></TextBlock>
+            <TextBlock Grid.Column="0" FontFamily="Cascadia Mono, Consolas, monospace" Text="{DynamicResource ServerIp}"></TextBlock>
             <TextBox Grid.Column="0" x:Name="IpTextBox" FontFamily="Cascadia Mono, Consolas, monospace" Height="45" CornerRadius="10" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"></TextBox>
             
             <TextBlock Grid.Column="1" FontFamily="Cascadia Mono, Consolas, monospace" Text="SSH port"></TextBlock>
@@ -78,10 +78,10 @@
         
         <!-- Контейнер с двумя полями ввода(логин и пароль) -->
         <Grid Grid.Row="2" ColumnDefinitions="Auto, *" Margin="20,0,20,0" ColumnSpacing="20">
-            <TextBlock Grid.Column="0" FontFamily="Cascadia Mono, Consolas, monospace" Text="Логин"></TextBlock>
+            <TextBlock Grid.Column="0" FontFamily="Cascadia Mono, Consolas, monospace" Text="{DynamicResource Login}"></TextBlock>
             <TextBox Grid.Column="0" x:Name="LoginTextBox" FontFamily="Cascadia Mono, Consolas, monospace" Height="45" Width="80" CornerRadius="10" Text="root" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"></TextBox>
             
-            <TextBlock Grid.Column="1" FontFamily="Cascadia Mono, Consolas, monospace" Text="Пароль"></TextBlock>
+            <TextBlock Grid.Column="1" FontFamily="Cascadia Mono, Consolas, monospace" Text="{DynamicResource Password}"></TextBlock>
             <TextBox Grid.Column="1" x:Name="PasswordTextBox" FontFamily="Cascadia Mono, Consolas, monospace" Height="45" CornerRadius="10" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"></TextBox>
         </Grid>
         
@@ -89,7 +89,7 @@
         
         <!-- Контейнер для кнопки Установить -->
         <Grid Grid.Row="3">
-            <Button Content="Установить" Width="310" Height="50"
+            <Button Content="{DynamicResource Install}" Width="310" Height="50"
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                     VerticalAlignment="Top" HorizontalAlignment="Center"
                     CornerRadius="12"
@@ -116,7 +116,7 @@
                     CornerRadius="0,0,15,15"
                     Margin="0,25,0,6"
                     Padding="12,8">
-                <TextBlock Text="Здесь появится ход установки....."
+                <TextBlock Text="{DynamicResource InstallHint}"
                            Foreground="#7F8596"
                            FontFamily="Cascadia Mono, Consolas, monospace"
                            FontSize="12"

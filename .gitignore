@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.tools/
+.vs/
+.idea/
+build/
+artifacts/
+logs/
+client/
+*.user
+*.lnk
+*.pcap*
+*.etl
+*.zip
+*.tar.gz
+.env
+settings.json

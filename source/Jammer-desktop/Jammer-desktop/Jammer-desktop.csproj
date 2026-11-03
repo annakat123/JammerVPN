@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.1.4" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
@@ -28,5 +29,11 @@
     <ItemGroup>
       <ProjectReference Include="..\..\Jammer\Jammer.Core\Jammer.Core.csproj" />
       <ProjectReference Include="..\..\Jammer\Jammer.Deploy\Jammer.Deploy.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\..\Jammer\wintun.dll" Link="wintun.dll"
+            CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+            ExcludeFromSingleFile="true" />
     </ItemGroup>
 </Project>

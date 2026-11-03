@@ -9,7 +9,7 @@
     <Grid RowDefinitions="*,50,150">
         
         <Grid Grid.Row="0">
-            <Button Content="Connect"
+            <Button x:Name="ConnectButton" Content="{DynamicResource Connect}" Click="ConnectButton_OnClick"
                     CornerRadius="100"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -17,7 +17,8 @@
                     VerticalContentAlignment="Center"
                     Height="140"
                     Width="140"
-                    FontSize="20"
+                    FontSize="18"
+                    Padding="0"
                     FontWeight="SemiBold"
                     Margin="0,40,0,0"
                     Cursor="hand">
@@ -41,7 +42,7 @@
         </Grid>
 
         <Grid Grid.Row="1">
-            <TextBox Text="77.221.140.145"
+            <TextBox x:Name="ServerIpTextBox" PlaceholderText="{DynamicResource ServerIp}"
                      Width="220"
                      Height="40"
                      CornerRadius="12"
@@ -82,7 +83,9 @@
                     CornerRadius="0,0,15,15"
                     Margin="0,25,0,6"
                     Padding="12,8">
-                <TextBlock Text="Консольный вывод....."
+                <ScrollViewer x:Name="LogScroll" Classes="log" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" AllowAutoHide="False">
+                <TextBlock x:Name="StatusText"
                            Foreground="#7F8596"
                            FontFamily="Cascadia Mono, Consolas, monospace"
                            FontSize="12"
@@ -91,6 +94,7 @@
                            HorizontalAlignment="Left">
 
                 </TextBlock>
+                </ScrollViewer>
             </Border>
         </Grid>
         

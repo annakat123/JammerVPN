@@ -4,6 +4,11 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Jammer_desktop.ViewModels;
 using Avalonia.VisualTree;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using Serilog;
 
 namespace Jammer_desktop.Views;
 
@@ -12,6 +17,23 @@ public partial class LogView : UserControl
     public LogView()
     {
         InitializeComponent();
+        LogPath.Text = AppLogging.Folder;
+    }
+
+    private void OpenLog_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var file = Directory.GetFiles(AppLogging.Folder, "log-*.txt").OrderBy(p => p).LastOrDefault();
+            if (file is null) { LogStatus.Text = AppText.Get("NoLogs"); return; }
+            Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+            LogStatus.Text = "";
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not open log file");
+            LogStatus.Text = AppText.Get("OpenLogError");
+        }
     }
 
     private void BackButton_OnClick(object? sender, RoutedEventArgs e)

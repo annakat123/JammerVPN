@@ -16,6 +16,9 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,-12,0"/>
         </Style>
+        <Style Selector="StackPanel TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
         
         <Style Selector="Button:pressed PathIcon.caret">
             <Setter Property="Foreground" Value="#C9444A"/>
@@ -68,7 +71,7 @@
             
                 <Grid ColumnDefinitions="Auto, *">
                     <PathIcon Grid.Column="0" Classes="caret" Data="{markup:IconGeometry Icon=caret_left, IconType=regular}"></PathIcon>
-                    <TextBlock Grid.Column="1" Text="Общее" FontWeight="Bold" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"></TextBlock>
+                    <TextBlock Grid.Column="1" Text="{DynamicResource General}" FontWeight="Bold" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"></TextBlock>
                 </Grid>
             </Button>
         </Grid>
@@ -80,10 +83,10 @@
             <Grid ColumnDefinitions="*,Auto">
                 
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Запускать вместе с Windows"
+                    <TextBlock Text="{DynamicResource Startup}"
                                FontSize="15" FontWeight="Medium" Foreground="#E6E8EE"/>
                     
-                    <TextBlock Text="автозапуск при входе в систему"
+                    <TextBlock Text="{DynamicResource StartupHint}"
                                FontSize="12" Foreground="#7F8596"/>
                 </StackPanel>
                 
@@ -100,10 +103,10 @@
             <Grid ColumnDefinitions="*,Auto">
                 
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Сворачивать в трей"
+                    <TextBlock Text="{DynamicResource Tray}"
                                FontSize="15" FontWeight="Medium" Foreground="#E6E8EE"/>
                     
-                    <TextBlock Text="Закрытие окна не отключает VPN"
+                    <TextBlock Text="{DynamicResource TrayHint}"
                                FontSize="12" Foreground="#7F8596"/>
                 </StackPanel>
                 
@@ -120,14 +123,14 @@
             <Grid ColumnDefinitions="*,Auto">
                 
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Логирование"
+                    <TextBlock Text="{DynamicResource Logging}"
                                FontSize="15" FontWeight="Medium" Foreground="#E6E8EE"/>
                     
-                    <TextBlock Text="Журнал работы приложения"
+                    <TextBlock Text="{DynamicResource LoggingHint}"
                                FontSize="12" Foreground="#7F8596"/>
                 </StackPanel>
                 
-                <ToggleSwitch Grid.Column="1" IsChecked="False" Cursor="hand"
+                <ToggleSwitch x:Name="LoggingToggle" Grid.Column="1" IsChecked="False" Cursor="hand"
                               OnContent="" OffContent="" MinWidth="0" Padding="0"
                               VerticalAlignment="Center" Margin="0,0,-12,0"/>
             </Grid>
@@ -139,14 +142,14 @@
             <Grid ColumnDefinitions="*,Auto">
                 
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Язык"
+                    <TextBlock Text="{DynamicResource Language}"
                                FontSize="15" FontWeight="Medium" Foreground="#E6E8EE"/>
                     
-                    <TextBlock Text="Язык работы приложения"
+                    <TextBlock Text="{DynamicResource LanguageHint}"
                                FontSize="12" Foreground="#7F8596"/>
                 </StackPanel>
                 
-                <ComboBox Grid.Column="1" Width="40" Height="20" Foreground="#6B6F80"  Background="#22232A" BorderBrush="#2E2F38" >
+                <ComboBox x:Name="LanguageCombo" Grid.Column="1" Width="110" Height="32" VerticalAlignment="Center" Foreground="#6B6F80"  Background="#22232A" BorderBrush="#2E2F38" >
                     <ComboBoxItem Content="Русский"></ComboBoxItem>
                     <ComboBoxItem Content="English"></ComboBoxItem>
                     
@@ -158,5 +161,6 @@
         </Border>
         
         
+        <TextBlock Grid.Row="5" x:Name="SettingsStatus" Margin="20,10" TextWrapping="Wrap"/>
     </Grid>
 </UserControl>

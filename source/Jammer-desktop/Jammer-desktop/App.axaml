@@ -10,8 +10,27 @@
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <SolidColorBrush x:Key="ScrollBarThumbFill" Color="#4A4B57"/>
+        <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#C9444A"/>
+        <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#D95A5F"/>
+        <SolidColorBrush x:Key="ScrollBarBackground" Color="#121318"/>
+        <SolidColorBrush x:Key="ScrollBarBackgroundPointerOver" Color="#121318"/>
+        <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#121318"/>
+        <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#121318"/>
+        <SolidColorBrush x:Key="ScrollBarForeground" Color="#4A4B57"/>
+        <Color x:Key="ScrollBarThumbBackgroundColor">#4A4B57</Color>
+    </Application.Resources>
+
     <Application.Styles>
         <materialIcons:MaterialIconStyles />
         <FluentTheme />
+        <Style Selector="ScrollViewer.log /template/ ScrollBar:vertical">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
+        </Style>
+        <Style Selector="ScrollViewer.log /template/ ScrollBar /template/ RepeatButton">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
     </Application.Styles>
 </Application>

@@ -7,6 +7,8 @@ using Jammer_desktop.ViewModels;
 using Avalonia.VisualTree;
 using Jammer.Core;
 using Jammer.Deploy;
+using System;
+using Serilog;
 
 namespace Jammer_desktop.Views;
 
@@ -25,9 +27,10 @@ public partial class SelfHostedView : UserControl
         settingsViewModel.RouteBack();
     }
 
-    private void Button_OnClick(object? sender, RoutedEventArgs e)
+    private async void Button_OnClick(object? sender, RoutedEventArgs e)
     {
         int.TryParse(SshPortTextBox.Text, out var port);
-        SshService.DeploySelfHosted(IpTextBox.Text, port, LoginTextBox.Text, PasswordTextBox.Text);
+        try { await SshService.DeploySelfHosted(IpTextBox.Text, port, LoginTextBox.Text, PasswordTextBox.Text); }
+        catch (Exception ex) { Log.Error(ex, "Self-hosted installation failed"); }
     }
 }

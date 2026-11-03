@@ -8,6 +8,7 @@ namespace Jammer.Core;
 
 public class WinRoute : IRoute
 {
+    private string? _serverInterface;
     private static ILogger _winRouteLogger = Log.ForContext("SourceContext", "WinRoute");
 
     /// <summary>
@@ -15,7 +16,7 @@ public class WinRoute : IRoute
     /// </summary>
     /// <param name="command"></param>
     /// <exception cref="InvalidOperationException"></exception>
-    private static void RunNetsh(string command)
+    private static void RunNetsh(string command, bool required = true)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "netsh";
@@ -36,6 +37,7 @@ public class WinRoute : IRoute
             if (process.ExitCode != 0)
             {
                 _winRouteLogger.Error("Команда 'netsh {Command}' завершилась с кодом {ExitCode}", command, process.ExitCode);
+                if (required) throw new InvalidOperationException($"[WinRoute] netsh {command}: код {process.ExitCode}");
             }
         }
     }
@@ -92,6 +94,7 @@ public class WinRoute : IRoute
             localGatewayIp = networkInfo.gatewayIp;
         }
         
+        _serverInterface = localInterface;
         RunNetsh(
             $"""interface ipv4 set address name="JammerTun" static {clientIp} 255.255.255.0 172.16.0.1""");
         
@@ -115,16 +118,16 @@ public class WinRoute : IRoute
     public void Clean(string serverIp, string localInterface)
     {
         RunNetsh(
-            $"""interface ipv4 delete route prefix={serverIp}/32 interface="{localInterface}" """);
+            $"""interface ipv4 delete route prefix={serverIp}/32 interface="{_serverInterface ?? localInterface}" """, required: false);
 
         RunNetsh(
-            $"""interface ipv4 delete route prefix=0.0.0.0/1 interface="{localInterface}" """);
+            $"""interface ipv4 delete route prefix=0.0.0.0/1 interface="{localInterface}" """, required: false);
 
         RunNetsh(
-            $"""interface ipv4 delete route prefix=128.0.0.0/1 interface="{localInterface}" """);
+            $"""interface ipv4 delete route prefix=128.0.0.0/1 interface="{localInterface}" """, required: false);
         
         RunNetsh(
-            $"""interface ipv4 delete route prefix=0.0.0.0/0 interface="{localInterface}" """);
+            $"""interface ipv4 delete route prefix=0.0.0.0/0 interface="{localInterface}" """, required: false);
         
     }
 

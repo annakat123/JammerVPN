@@ -5,5 +5,11 @@
              xmlns:markup="clr-namespace:PhosphorIconsAvalonia.Markup;assembly=PhosphorIconsAvalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Jammer_desktop.Views.LogView">
-    
+    <StackPanel Margin="20,50,20,0" Spacing="16">
+        <Button Content="←" Click="BackButton_OnClick"/>
+        <TextBlock Text="{DynamicResource Logs}" FontSize="18" FontWeight="Bold"/>
+        <TextBlock x:Name="LogPath" TextWrapping="Wrap"/>
+        <Button Content="{DynamicResource OpenLog}" Click="OpenLog_OnClick"/>
+        <TextBlock x:Name="LogStatus" TextWrapping="Wrap"/>
+    </StackPanel>
 </UserControl>

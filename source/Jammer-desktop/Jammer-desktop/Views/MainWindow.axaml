@@ -1,0 +1,103 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Jammer_desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:pia="using:PhosphorIconsAvalonia.Markup"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Jammer_desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Height="535"
+        Width="350"
+        Background="#1A1B21"
+        CanResize="False"
+        Icon="/Assets/jammer-vpn-dark.ico"
+        Title="JammerVPN"
+        Foreground="#6B6F80"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="32">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="ButtonBackground" Color="#22232A"/>
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2A2B35"/>
+        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#33343F"/>
+        <SolidColorBrush x:Key="ButtonBorderBrush" Color="#2E2F38"/>
+        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3C3D49"/>
+        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#3C3D49"/>
+    </Window.Resources>
+
+    <Grid RowDefinitions="*,50,150,70">
+        
+        <ContentControl Grid.Row="0" Grid.RowSpan="3" Content="{Binding CurrentPage}" />
+
+        <Grid Grid.Row="3">
+            <Border Background="#121318"
+                    BorderBrush="#2E2F38"
+                    BorderThickness="1"
+                    CornerRadius="15, 15, 0, 0">
+                <UniformGrid Columns="2" >
+
+
+                    <Button CornerRadius="14"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Height="40"
+                            Width="40"
+                            Margin="0,0,10,0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Cursor="hand"
+                            Click="HomeButton_OnClick">
+                        
+                        <PathIcon Data="{pia:IconGeometry Icon=house, IconType=bold}" Height="27" Width="27" Foreground="#6B6F80" x:Name="HomeIcon" />
+                        
+                        
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="Transparent"/>
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="Transparent"/>
+                            
+                            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="Transparent"/>
+                        </Button.Resources>
+                        
+                    </Button>
+
+
+                    <Button CornerRadius="14"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Height="40"
+                            Width="40"
+                            Margin="10,0,0,0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Cursor="hand"
+                            Click="SettingsButton_OnClick">
+                        
+                        <PathIcon Data="{pia:IconGeometry Icon=gear_fine, IconType=bold}" Height="27" Width="27" Foreground="#6B6F80" x:Name="SettingsIcon"></PathIcon>
+                        
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="Transparent"/>
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="Transparent"/>
+                            
+                            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="Transparent"/>
+                        </Button.Resources>
+                        
+                        
+                    </Button>
+
+                    
+                </UniformGrid>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+
+</Window>

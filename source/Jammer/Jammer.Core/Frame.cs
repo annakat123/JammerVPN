@@ -1,0 +1,49 @@
+﻿using System.Buffers.Binary;
+using System.Data.Common;
+using System.Net.Sockets;
+
+namespace Jammer.Core;
+
+public class Frame
+{
+
+    public static async Task WriteFrameAsync(Socket client,byte[] data)
+    {
+        byte[] frame = new byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(frame, data.Length);
+        byte[] alldata = frame.Concat(data).ToArray();
+
+        await client.SendAsync(alldata);
+    }
+
+    public static async Task<byte[]> ReadFrameAsync(Socket client)
+    {
+        var first4Bytes =await ReadExactlyAsync(client, 4);
+        var allMessageLength = BinaryPrimitives.ReadInt32BigEndian(first4Bytes);
+
+        if (allMessageLength<=0 || allMessageLength>1528)
+        {
+            throw new OverflowException($"[Frame] получен пакет длиной {allMessageLength}, и этот пакет был отклонен");
+        }
+        
+        var data =await ReadExactlyAsync(client, allMessageLength);
+        return data;
+    }
+
+    private static async Task<byte[]> ReadExactlyAsync(Socket socket, int byteCount)
+    {
+        byte[] buffer = new byte[byteCount];
+        int total=0;
+        while (total<byteCount)
+        {
+            int bytesRead = await socket.ReceiveAsync(buffer.AsMemory(total, byteCount-total));
+            if (bytesRead == 0)
+            {
+                throw new IOException($"[Frame] клиент отключился");
+            }
+            total += bytesRead;
+        }
+        
+        return buffer;
+    }
+}

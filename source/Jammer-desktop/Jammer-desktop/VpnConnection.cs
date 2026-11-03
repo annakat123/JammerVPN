@@ -47,7 +47,6 @@ public sealed class VpnConnection
         Changed?.Invoke();
         ITun? tun = null;
         IRoute? route = null;
-        WindowsProxyScope? proxy = null;
         bool adapterCreated = false, routesStarted = false;
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         _socket = socket;
@@ -72,7 +71,6 @@ public sealed class VpnConnection
             routesStarted = true;
             route.Route(address, tunnelIp, null, null);
             route.DNS();
-            if (OperatingSystem.IsWindows() && tun is WinTun) proxy = new WindowsProxyScope();
             var diagnostics = new TunnelDiagnostics(tunnelIp);
 
             async Task Report()
@@ -115,6 +113,9 @@ public sealed class VpnConnection
                     var ready = TunnelReadiness.CheckAsync(tunnelIp, stop.Token);
                     await await Task.WhenAny(ready, receive, send);
                     await ready;
+                    try { await ProxyDiagnostics.ReportAsync(stop.Token); }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    { Log.Warning(ex, "Could not inspect system proxy; settings were left unchanged"); }
                 }
                 IsConnected = true;
                 IsConnecting = false;
@@ -140,7 +141,6 @@ public sealed class VpnConnection
                 catch (Exception ex) { Log.Error(ex, "Could not remove VPN routes"); }
             if (adapterCreated && tun is WinTun)
                 try { WinTun.Close(); } catch (Exception ex) { Log.Error(ex, "Could not close TUN adapter"); }
-            try { proxy?.Dispose(); } catch (Exception ex) { Log.Error(ex, "Could not restore Windows proxy settings"); }
             _socket = null;
             _stop = null;
             IsConnected = IsConnecting = false;

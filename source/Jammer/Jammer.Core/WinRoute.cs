@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net.NetworkInformation;
 using NETCONLib;
 using Serilog;
@@ -47,6 +47,7 @@ public class WinRoute : IRoute
             }
 
             process.WaitForExit();
+            _winRouteLogger.Debug("netsh {Command}: exit {ExitCode}", command, process.ExitCode);
             
             if (process.ExitCode != 0)
             {

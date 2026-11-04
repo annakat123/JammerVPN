@@ -16,7 +16,7 @@ public sealed class GuiLogSink : ILogEventSink
     {
         bool install = logEvent.Properties.TryGetValue("SourceContext", out var source) && source.ToString() == "\"SshService\"";
         var line = $"{logEvent.Timestamp:HH:mm:ss} [{logEvent.Level}] {logEvent.RenderMessage()}";
-        if (logEvent.Exception is not null) line += ": " + logEvent.Exception.Message;
+        if (logEvent.Exception is not null) line += ": " + (AppLogging.Detailed ? logEvent.Exception.ToString() : logEvent.Exception.Message);
         Dispatcher.UIThread.Post(() =>
         {
             var text = (install ? InstallText : Text) + line + Environment.NewLine;

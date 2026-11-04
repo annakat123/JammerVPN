@@ -53,8 +53,10 @@ public sealed class VpnConnection
         _socket = socket;
         try
         {
+            Log.Debug("Connecting TCP to VPN server {Server}:7777", address);
             await socket.ConnectAsync(new IPEndPoint(IPAddress.Parse(address), 7777), stop.Token)
                 .AsTask().WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
+            Log.Debug("VPN TCP connected; starting key exchange");
             var key = await new Crypto.ECDH().CreateAesKey(socket).WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
             var frame = await Frame.ReadFrameAsync(socket).WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
             var identifier = Crypto.AES.Decrypt(frame, key);
@@ -67,6 +69,7 @@ public sealed class VpnConnection
             adapterCreated = true;
             tun.StartSession();
             string tunnelIp = $"172.16.0.{id}";
+            Log.Debug("VPN assigned tunnel address {TunnelIp}; configuring adapter and routes", tunnelIp);
             tun.ConfigureIpAddress(tunnelIp, 24);
             route = _createRoute();
             routesStarted = true;
@@ -110,7 +113,7 @@ public sealed class VpnConnection
             {
                 if (tun is WinTun)
                 {
-                    Log.Information("Checking DNS through JammerTun before marking VPN connected");
+                    Log.Debug("Checking DNS through JammerTun before marking VPN connected");
                     var ready = TunnelReadiness.CheckAsync(tunnelIp, stop.Token);
                     await await Task.WhenAny(ready, receive, send);
                     await ready;

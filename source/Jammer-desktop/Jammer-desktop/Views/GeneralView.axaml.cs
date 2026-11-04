@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -20,6 +20,8 @@ public partial class GeneralView : UserControl
         LoggingToggle.IsCheckedChanged += (_, _) =>
         {
             AppSettings.Current.LoggingEnabled = LoggingToggle.IsChecked == true;
+            AppLogging.SetDetailed(AppSettings.Current.LoggingEnabled);
+            Log.Information("Logging mode: {Mode}", AppLogging.Detailed ? "detailed" : "basic");
             SaveSettings();
         };
         LanguageCombo.SelectionChanged += (_, _) =>

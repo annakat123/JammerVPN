@@ -16,16 +16,18 @@ internal sealed class TunnelDiagnostics(string tunnelIp)
 
     public void FromTun(byte[] packet)
     {
+        if (!AppLogging.Detailed) return;
         Interlocked.Increment(ref _tunRead);
         Interlocked.Add(ref _outBytes, packet.Length);
         Inspect(packet, true);
     }
 
-    public void FrameSent() => Interlocked.Increment(ref _tcpSent);
-    public void FrameReceived() => Interlocked.Increment(ref _tcpReceived);
+    public void FrameSent() { if (AppLogging.Detailed) Interlocked.Increment(ref _tcpSent); }
+    public void FrameReceived() { if (AppLogging.Detailed) Interlocked.Increment(ref _tcpReceived); }
 
     public void ToTun(byte[] packet)
     {
+        if (!AppLogging.Detailed) return;
         Interlocked.Increment(ref _tunWritten);
         Interlocked.Add(ref _inBytes, packet.Length);
         Inspect(packet, false);
@@ -53,13 +55,13 @@ internal sealed class TunnelDiagnostics(string tunnelIp)
         if ((flags & 0x07) == 0 && count > 4) return;
         int sample = outbound ? Interlocked.Increment(ref _outSamples) : Interlocked.Increment(ref _inSamples);
         if (sample > 48) return;
-        Log.Information("VPN TCP443 {Direction}: {Source}:{SourcePort} -> {Destination}:{DestinationPort}, flags={Flags}, length={Length}",
+        Log.Debug("VPN TCP443 {Direction}: {Source}:{SourcePort} -> {Destination}:{DestinationPort}, flags={Flags}, length={Length}",
             outbound ? "TUN->server" : "server->TUN", new IPAddress(packet.AsSpan(12, 4)), sourcePort,
             new IPAddress(packet.AsSpan(16, 4)), destinationPort, flags, packet.Length);
     }
 
-    public void Report(string reason) => Log.Information(
-        "VPN counters ({Reason}): TUNread={TunRead}, TCPsent={TcpSent}, TCPreceived={TcpReceived}, TUNwritten={TunWritten}, outBytes={OutBytes}, inBytes={InBytes}, TCP443out={HttpsOut}, TCP443in={HttpsIn}, foreignSource={ForeignSource}",
+    public void Report(string reason) => Log.Debug(
+        "VPN counters for detailed intervals ({Reason}): TUNread={TunRead}, TCPsent={TcpSent}, TCPreceived={TcpReceived}, TUNwritten={TunWritten}, outBytes={OutBytes}, inBytes={InBytes}, TCP443out={HttpsOut}, TCP443in={HttpsIn}, foreignSource={ForeignSource}",
         reason, Interlocked.Read(ref _tunRead), Interlocked.Read(ref _tcpSent),
         Interlocked.Read(ref _tcpReceived), Interlocked.Read(ref _tunWritten),
         Interlocked.Read(ref _outBytes), Interlocked.Read(ref _inBytes),

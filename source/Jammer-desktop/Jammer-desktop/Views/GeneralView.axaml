@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -130,7 +130,7 @@
                                FontSize="12" Foreground="#7F8596"/>
                 </StackPanel>
                 
-                <ToggleSwitch x:Name="LoggingToggle" Grid.Column="1" IsChecked="False" Cursor="hand"
+                <ToggleSwitch x:Name="LoggingToggle" Grid.Column="1" IsChecked="False" Cursor="hand" ToolTip.Tip="{DynamicResource LoggingHelp}"
                               OnContent="" OffContent="" MinWidth="0" Padding="0"
                               VerticalAlignment="Center" Margin="0,0,-12,0"/>
             </Grid>

@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Serilog;
@@ -28,7 +28,7 @@ public class WinTun : ITun
         try
         {
             uint version = WintunGetRunningDriverVersion();
-            _tunLogger.Information($"Wintun version: {version >> 16}.{version & 0xFFFF}");
+            _tunLogger.Debug($"Wintun version: {version >> 16}.{version & 0xFFFF}");
         }
         catch (DllNotFoundException)
         {
@@ -136,7 +136,7 @@ public class WinTun : ITun
 
                 if (errorCode==183)
                 {
-                    _tunLogger.Information("адаптер уже существует в системе, переподключаемся...");
+                    _tunLogger.Debug("адаптер уже существует в системе, переподключаемся...");
                     _tunAdapter = WintunOpenAdapter("JammerTun");
                 }
                 
@@ -152,7 +152,7 @@ public class WinTun : ITun
             }
             else
             {
-                _tunLogger.Information("адаптер успешно создан");
+                _tunLogger.Debug("адаптер успешно создан");
             }
             
         }
@@ -193,7 +193,7 @@ public class WinTun : ITun
         
         RunNetsh("interface ipv4 set subinterface \"JammerTun\" mtu=1500 store=active");
 
-        _tunLogger.Information($"ipAddress успешно задан для виртуального адаптера");
+        _tunLogger.Debug($"ipAddress успешно задан для виртуального адаптера");
         
     }
 
@@ -214,7 +214,7 @@ public class WinTun : ITun
             }
             else
             {
-                _tunLogger.Information("сессия успешно создана");
+                _tunLogger.Debug("сессия успешно создана");
             }
             
         }
@@ -277,7 +277,7 @@ public class WinTun : ITun
         
         if (receivedPacketsBytes!=null)
         {
-            _tunLogger.Debug("получено {bytes} байт", receivedPacketsBytes.Length);
+            _tunLogger.Verbose("получено {bytes} байт", receivedPacketsBytes.Length);
         }
 
         return receivedPacketsBytes;
@@ -314,7 +314,7 @@ public class WinTun : ITun
             }
             if (!string.IsNullOrEmpty(output))
             {
-                _tunLogger.Information("[netsh stdOut] {Output}", output);
+                _tunLogger.Debug("[netsh stdOut] {Output}", output);
             }
 
             if (process.ExitCode!=0)

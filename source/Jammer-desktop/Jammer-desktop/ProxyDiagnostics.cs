@@ -16,7 +16,7 @@ internal static class ProxyDiagnostics
         // Observe the user's proxy; never change its settings or replace its listener.
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings");
         bool enabled = Convert.ToInt32(key?.GetValue("ProxyEnable", 0)) != 0;
-        Log.Information("Windows manual proxy enabled={Enabled}; settings preserved", enabled);
+        Log.Debug("Windows manual proxy enabled={Enabled}; settings preserved", enabled);
         if (!enabled) return;
         string server = key?.GetValue("ProxyServer") as string ?? "";
         foreach (string entry in server.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -29,7 +29,7 @@ internal static class ProxyDiagnostics
             try
             {
                 await socket.ConnectAsync(uri.Host, uri.Port, stop).AsTask().WaitAsync(TimeSpan.FromSeconds(1), stop);
-                Log.Information("Local proxy listener {Host}:{Port} is reachable", uri.Host, uri.Port);
+                Log.Debug("Local proxy listener {Host}:{Port} is reachable", uri.Host, uri.Port);
             }
             catch (Exception ex) when (ex is SocketException or TimeoutException)
             { Log.Warning("Local proxy {Host}:{Port} is unavailable; check the Jammer local proxy listener log", uri.Host, uri.Port); }

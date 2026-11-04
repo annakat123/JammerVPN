@@ -15,6 +15,7 @@ public sealed class AppSettings
     public string SelectedServer { get; set; } = "";
     public string Language { get; set; } = "ru";
     public bool LoggingEnabled { get; set; } = true;
+    public string LogFolder { get; set; } = "";
 
     private static AppSettings Load()
     {

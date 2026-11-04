@@ -24,6 +24,7 @@ internal sealed class LocalProxy : IAsyncDisposable
     private readonly HashSet<Task> _tasks = new();
     private readonly SemaphoreSlim _slots = new(64);
     private readonly Task _monitor;
+    private int _connectionSamples;
 
     public static LocalProxy FromSettings(string tunnelIp, CancellationToken stop)
     {
@@ -82,12 +83,12 @@ internal sealed class LocalProxy : IAsyncDisposable
                         _listeners.Add(listener);
                         pending.Remove(endpoint);
                         _acceptors.Add(AcceptAsync(listener));
-                        Log.Information("Jammer local HTTP proxy listening on {Endpoint}; outbound source={Source}, interface={Interface}", endpoint, _source, _interface);
+                        Log.Debug("Jammer local HTTP proxy listening on {Endpoint}; outbound source={Source}, interface={Interface}", endpoint, _source, _interface);
                     }
                     catch (SocketException ex)
                     {
                         listener.Stop();
-                        if (reported.Add(endpoint)) Log.Information("Local proxy port {Endpoint} is unavailable ({Error}); existing listener left untouched", endpoint, ex.SocketErrorCode);
+                        if (reported.Add(endpoint)) Log.Debug("Local proxy port {Endpoint} is unavailable ({Error}); existing listener left untouched", endpoint, ex.SocketErrorCode);
                     }
                 }
                 if (pending.Count > 0) await Task.Delay(2000, _stop.Token);
@@ -119,15 +120,16 @@ internal sealed class LocalProxy : IAsyncDisposable
         {
             var stream = client.GetStream();
             bool established = false;
+            int length = 0;
             try
             {
                 session.CancelAfter(TimeSpan.FromSeconds(15));
                 var token = session.Token;
                 byte[] header = new byte[16384];
-                int length = 0;
                 while (length < header.Length)
                 {
-                    await stream.ReadExactlyAsync(header.AsMemory(length++, 1), token);
+                    await stream.ReadExactlyAsync(header.AsMemory(length, 1), token);
+                    length++;
                     if (length >= 4 && header[length - 4] == 13 && header[length - 3] == 10 && header[length - 2] == 13 && header[length - 1] == 10) break;
                 }
                 if (length == header.Length) throw new IOException("Proxy request header too large");
@@ -144,6 +146,8 @@ internal sealed class LocalProxy : IAsyncDisposable
                 if (OperatingSystem.IsWindows())
                     remote.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)31 /* IP_UNICAST_IF */, IPAddress.HostToNetworkOrder(_interface));
                 await remote.ConnectAsync(new IPEndPoint(addresses[0], target.Port), token);
+                if (AppLogging.Detailed && Interlocked.Increment(ref _connectionSamples) <= 16)
+                    Log.Debug("Local proxy upstream connected through {Source}: {Destination}:{Port}, CONNECT={Connect}", _source, addresses[0], target.Port, connect);
                 using var upstream = new NetworkStream(remote, ownsSocket: false);
                 if (connect) await stream.WriteAsync("HTTP/1.1 200 Connection Established\r\n\r\n"u8.ToArray(), token);
                 else
@@ -164,11 +168,12 @@ internal sealed class LocalProxy : IAsyncDisposable
                 }
                 await Task.WhenAll(Pump(stream, upstream, remote), Pump(upstream, stream, client.Client));
             }
+            catch (EndOfStreamException) when (length == 0 && !established) { /* A listener availability probe sends no HTTP request. */ }
             catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException)
             {
                 if (!_stop.IsCancellationRequested)
                 {
-                    Log.Warning("Jammer local proxy connection failed: {Error}", ex is SocketException socketError ? socketError.SocketErrorCode.ToString() : ex.GetType().Name);
+                    Log.Warning(ex, "Jammer local proxy connection failed: {Error}", ex is SocketException socketError ? socketError.SocketErrorCode.ToString() : ex.GetType().Name);
                     if (!established)
                         try { await stream.WriteAsync("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"u8.ToArray(), _stop.Token); } catch { }
                 }

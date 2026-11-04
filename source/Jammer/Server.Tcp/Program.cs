@@ -106,6 +106,18 @@ class Program
     async static Task CreateTcpConnection()
     {
         tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        if (OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("JAMMER_TCP_CONGESTION") == "bbr")
+        {
+            try
+            {
+                tcpSocket.SetRawSocketOption(6, 13, "bbr"u8); // IPPROTO_TCP / TCP_CONGESTION; inherited by accepted sockets.
+                _serverTcpLogger.Information("TCP congestion control: bbr");
+            }
+            catch (SocketException ex)
+            {
+                _serverTcpLogger.Warning("BBR unavailable; using system TCP congestion control: {Error}", ex.SocketErrorCode);
+            }
+        }
         var serverEndPoint = new IPEndPoint(IPAddress.Any, localPort);
         
         try
@@ -134,20 +146,8 @@ class Program
     }
     
 
-    async static Task SendMessageAsync(ClientSession clientSession)
-    {
-        var client = clientSession.Socket;
-        var key = clientSession.Key;
-        var queue= clientSession.Queue;
-        
-        
-        await foreach (var el in queue.Reader.ReadAllAsync())
-        {
-            byte[] data = Crypto.AES.Encrypt(el, key);
-            await Frame.WriteFrameAsync(client, data);
-        }
-        
-    }
+    static Task SendMessageAsync(ClientSession clientSession) =>
+        PacketSender.SendAsync(clientSession.Socket, clientSession.Key, clientSession.Queue.Reader);
     
     async static Task SendClientIdAsync(Socket client, byte[] input, byte[] key)
     {

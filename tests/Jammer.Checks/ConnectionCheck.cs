@@ -39,6 +39,8 @@ static class ConnectionCheck
                 if(scenario=="echo")
                 {
                     await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                    var configuredSocket=(Socket)typeof(VpnConnection).GetField("_socket",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(connection)!;
+                    Check(configuredSocket.NoDelay && configuredSocket.SendBufferSize>=4*1024*1024,"VPN socket keeps NoDelay and the configured send buffer");
                     await tun.Received.Task.WaitAsync(TimeSpan.FromSeconds(5));
                     Check(route.Address=="172.16.0.42" && route.Dns,"assigned tunnel IP and DNS configured");
                     connection.Disconnect();

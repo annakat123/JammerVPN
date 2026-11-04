@@ -49,7 +49,8 @@ public sealed class VpnConnection
         IRoute? route = null;
         LocalProxy? proxy = null;
         bool adapterCreated = false, routesStarted = false;
-        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            { NoDelay = true, SendBufferSize = 4 * 1024 * 1024 };
         _socket = socket;
         try
         {
@@ -57,6 +58,7 @@ public sealed class VpnConnection
             await socket.ConnectAsync(new IPEndPoint(IPAddress.Parse(address), 7777), stop.Token)
                 .AsTask().WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
             Log.Debug("VPN TCP connected; starting key exchange");
+            Log.Debug("VPN socket buffers: send={SendBuffer}, receive={ReceiveBuffer}", socket.SendBufferSize, socket.ReceiveBufferSize);
             var key = await new Crypto.ECDH().CreateAesKey(socket).WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
             var frame = await Frame.ReadFrameAsync(socket).WaitAsync(TimeSpan.FromSeconds(15), stop.Token);
             var identifier = Crypto.AES.Decrypt(frame, key);

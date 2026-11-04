@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
@@ -42,8 +42,9 @@ class Program
         while (true)
         {
             Socket client = await tcpSocket.AcceptAsync();
-            _ = HandleClientAsync(client);
+            client.NoDelay = true;
             _serverTcpLogger.Information("клиент принят: {Client}", client.RemoteEndPoint);
+            _ = HandleClientAsync(client);
             
         }
         
@@ -79,7 +80,8 @@ class Program
             clientIds.Remove(clientId);
             client.Close();
             clientSession?.Queue.Writer.Complete();
-            _serverTcpLogger.Information("{id} удален", clientId);
+            _serverTcpLogger.Information("{id} удален; queueDrops={QueueDrops}", clientId,
+                clientSession is null ? 0 : Interlocked.Read(ref clientSession.QueueDrops));
         }
     }
     

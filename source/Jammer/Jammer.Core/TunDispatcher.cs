@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Serilog;
 using System.Threading.Channels;
@@ -10,6 +10,8 @@ public class ClientSession
     public Socket Socket;
     public byte[] Key;
     public Channel<byte[]> Queue = Channel.CreateBounded<byte[]>(1000);
+    public long QueueDrops;
+    internal long NextQueueWarning;
 }
 
 //читаем пакет смотрим кому он и отправляем этому клиенту
@@ -57,7 +59,16 @@ public class TunDispatcher
 
                 if (!_clients.TryGetValue(clientId, out var client)) continue; 
 
-                client.Queue.Writer.TryWrite(packet);
+                if (!client.Queue.Writer.TryWrite(packet))
+                {
+                    long dropped = Interlocked.Increment(ref client.QueueDrops);
+                    long now = Environment.TickCount64;
+                    if (now >= client.NextQueueWarning)
+                    {
+                        client.NextQueueWarning = now + 10000;
+                        _logger.Warning("Client {ClientId} queue rejected a packet; dropped total {Dropped}", clientId, dropped);
+                    }
+                }
             }
             catch (Exception ex)
             {

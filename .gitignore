@@ -15,3 +15,4 @@ client/
 *.tar.gz
 .env
 settings.json
+__pycache__/

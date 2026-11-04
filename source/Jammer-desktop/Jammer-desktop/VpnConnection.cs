@@ -97,10 +97,20 @@ public sealed class VpnConnection
             }
             async Task Send()
             {
+                using var readEvent = (tun as WinTun)?.GetReadWaitEvent();
+                WaitHandle[]? waits = readEvent is null ? null : new WaitHandle[] { stop.Token.WaitHandle, readEvent };
                 while (!stop.IsCancellationRequested)
                 {
                     var packet = tun.ReceivePacket();
-                    if (packet is null) { await Task.Delay(1, stop.Token); continue; }
+                    if (packet is null)
+                    {
+                        if (waits is not null)
+                        {
+                            if (WaitHandle.WaitAny(waits) == 0) stop.Token.ThrowIfCancellationRequested();
+                        }
+                        else await Task.Delay(1, stop.Token);
+                        continue;
+                    }
                     diagnostics.FromTun(packet);
                     await Frame.WriteFrameAsync(socket, Crypto.AES.Encrypt(packet, key));
                     diagnostics.FrameSent();
@@ -108,7 +118,8 @@ public sealed class VpnConnection
             }
             var report = Report();
             var receive = Receive();
-            var send = Send();
+            // Native packet waiting blocks; keep it off the setup path so readiness can run.
+            var send = Task.Run(Send);
             try
             {
                 if (tun is WinTun)

@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Serilog;
 
 namespace Jammer.Core;
@@ -82,6 +83,24 @@ public class WinTun : ITun
     (
         IntPtr session
     );
+
+    [DllImport("wintun.dll")]
+    private static extern IntPtr WintunGetReadWaitEvent(IntPtr session);
+
+    public EventWaitHandle GetReadWaitEvent()
+    {
+        if (_session == IntPtr.Zero) throw new InvalidOperationException("[WinTun] session is not active");
+        IntPtr handle = WintunGetReadWaitEvent(_session);
+        if (handle == IntPtr.Zero) throw new InvalidOperationException("[WinTun] read event is unavailable");
+        return BorrowReadEvent(handle);
+    }
+
+    private static EventWaitHandle BorrowReadEvent(IntPtr handle)
+    {
+        // Wintun owns this event. Only the managed wrapper is disposed by the caller.
+        return new EventWaitHandle(false, EventResetMode.ManualReset)
+            { SafeWaitHandle = new SafeWaitHandle(handle, ownsHandle: false) };
+    }
 
     
     // работа с сетью и пакетами
